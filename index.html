@@ -87,13 +87,21 @@
   .tab{padding:.5rem 1rem;font-size:.85rem;font-weight:600;border-bottom:3px solid transparent;cursor:pointer;color:#64748b;transition:all .15s}
   .tab.active{border-color:var(--blue);color:var(--blue)}
 
-  /* ── Intro card ── */
+  /* ── Intro card (tile style) ── */
   .subtest-card{
-    border:2px solid var(--border);border-radius:12px;padding:.9rem 1rem;
-    cursor:pointer;transition:all .15s;text-align:left;background:#fff;
+    border:2px solid var(--border);border-radius:14px;
+    padding:.85rem .9rem;cursor:pointer;transition:all .15s;
+    text-align:left;background:#fff;display:flex;flex-direction:column;
+    gap:.45rem;position:relative;overflow:hidden;
   }
-  .subtest-card:hover{border-color:var(--blue-light);background:var(--blue-bg)}
-  .subtest-card.active{border-color:var(--blue);background:var(--blue-bg)}
+  .subtest-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:var(--tile-color,#3b82f6);opacity:0;transition:opacity .15s;
+  }
+  .subtest-card:hover{border-color:var(--blue-light);background:var(--blue-bg);transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.1)}
+  .subtest-card:hover::before{opacity:1}
+  .subtest-card.active{border-color:var(--blue);background:var(--blue-bg);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+  .subtest-card.active::before{opacity:1}
 
   /* ── Animations ── */
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -116,24 +124,36 @@
 
 <!-- ═══════════════════ INTRO SCREEN ═══════════════════ -->
 <div id="screen-intro" class="min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+  <div class="bg-white rounded-2xl shadow-xl w-full overflow-hidden" style="max-width:860px">
     <!-- Header -->
-    <div class="bg-gradient-to-br from-blue-700 to-blue-500 p-8 text-white">
-      <div class="text-xs font-bold tracking-widest text-blue-200 uppercase mb-1">E-Book Paten Drilling</div>
-      <div class="text-3xl font-black mb-1">SNBT 2026</div>
-      <div class="text-blue-100 text-sm">Computer Based Test · Simulasi UTBK</div>
+    <div class="bg-gradient-to-br from-blue-700 to-blue-500 px-8 py-6 text-white flex items-center justify-between gap-6">
+      <div>
+        <div class="text-xs font-bold tracking-widest text-blue-200 uppercase mb-1">E-Book Paten Drilling</div>
+        <div class="text-3xl font-black mb-0.5">SNBT 2026</div>
+        <div class="text-blue-100 text-sm">Computer Based Test · Simulasi UTBK</div>
+      </div>
+      <div class="text-right hidden sm:block">
+        <div class="text-blue-200 text-xs mb-1">Total Sub-Tes</div>
+        <div class="text-5xl font-black text-white opacity-25" id="total-subtest-count">6</div>
+      </div>
     </div>
-    <!-- Subtest Select -->
-    <div class="p-6">
-      <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Pilih Sub-Tes</div>
-      <div id="subtest-grid" class="space-y-2 mb-5"></div>
-      <div id="selected-info" class="bg-blue-50 rounded-xl p-3 mb-5 text-sm text-blue-700 font-medium border border-blue-100"></div>
-      <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 rounded-xl text-base shadow-lg shadow-blue-200 transition">
-        Mulai Ujian ▶
-      </button>
-      <p class="text-center text-xs text-slate-400 mt-3">Timer otomatis mulai. Jawaban tersimpan per soal.</p>
-      <div class="mt-4 text-center">
-        <button onclick="openDonateModal()" class="mt-3 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Donate via QRIS</button>
+    <!-- Body: 2-col on desktop -->
+    <div class="p-6 flex flex-col lg:flex-row gap-5">
+      <!-- LEFT: tile grid -->
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Pilih Sub-Tes</div>
+        <div id="subtest-grid" class="grid grid-cols-2 gap-2.5"></div>
+      </div>
+      <!-- RIGHT: detail + action -->
+      <div class="lg:w-72 flex flex-col gap-4">
+        <div id="selected-info" class="bg-blue-50 rounded-xl p-4 text-sm text-blue-700 font-medium border border-blue-100 flex-1 min-h-0"></div>
+        <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 rounded-xl text-base shadow-lg shadow-blue-200 transition">
+          Mulai Ujian ▶
+        </button>
+        <p class="text-center text-xs text-slate-400">Timer otomatis mulai. Jawaban tersimpan per soal.</p>
+        <div class="text-center">
+          <button onclick="openDonateModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition text-sm">Donate via QRIS</button>
+        </div>
       </div>
     </div>
   </div>
@@ -546,24 +566,45 @@ const ai  = (letter) => OPTS.indexOf(letter);
 function initIntro(){
   const g = document.getElementById('subtest-grid');
   g.innerHTML='';
+  // Update total count badge
+  const cnt = document.getElementById('total-subtest-count');
+  if(cnt) cnt.textContent = examData.subtests.length;
+
   examData.subtests.forEach((st,i)=>{
+    const isActive = S.stIdx===i;
     const d = document.createElement('button');
-    d.className = 'subtest-card'+(S.stIdx===i?' active':'');
+    d.className = 'subtest-card'+(isActive?' active':'');
+    d.style.setProperty('--tile-color', st.color);
     d.innerHTML = `
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">${st.icon}</span>
-        <div class="flex-1 text-left">
-          <div class="font-bold text-slate-700 text-sm">${st.label}</div>
-          <div class="text-xs text-slate-400">${st.questions.length} soal · ${fmt(st.duration)}</div>
-        </div>
-        <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:${st.color}22;color:${st.color}">${st.shortLabel}</span>
-      </div>`;
+      <div class="flex items-center justify-between gap-1 mb-0.5">
+        <span class="text-xl">${st.icon}</span>
+        <span class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
+          style="background:${st.color}22;color:${st.color}">${st.shortLabel}</span>
+      </div>
+      <div class="font-bold text-slate-700 text-sm leading-tight">${st.label}</div>
+      <div class="text-xs text-slate-400 mt-0.5">${st.questions.length} soal &nbsp;·&nbsp; ${fmt(st.duration)}</div>
+      ${isActive ? `<div class="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl" style="background:${st.color}"></div>` : ''}
+    `;
     d.onclick = ()=>{ S.stIdx=i; initIntro(); };
     g.appendChild(d);
   });
+
   const st = examData.subtests[S.stIdx];
-  document.getElementById('selected-info').innerHTML=
-    `<b>${st.icon} ${st.label}</b> &nbsp;·&nbsp; ${st.questions.length} soal &nbsp;·&nbsp; ${fmt(st.duration)} &nbsp;·&nbsp; IRT Scoring`;
+  document.getElementById('selected-info').innerHTML=`
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">${st.icon}</span>
+      <div>
+        <div class="font-bold text-blue-800 text-base">${st.label}</div>
+        <div class="text-blue-500 text-xs font-semibold">${st.shortLabel}</div>
+      </div>
+    </div>
+    <div class="space-y-1.5 text-xs">
+      <div class="flex justify-between"><span class="text-blue-400">Jumlah Soal</span><span class="font-bold">${st.questions.length} butir</span></div>
+      <div class="flex justify-between"><span class="text-blue-400">Waktu</span><span class="font-bold">${fmt(st.duration)}</span></div>
+      <div class="flex justify-between"><span class="text-blue-400">Penilaian</span><span class="font-bold">IRT Scoring</span></div>
+      <div class="mt-2 pt-2 border-t border-blue-100 text-blue-500 leading-relaxed">${st.desc}</div>
+    </div>
+  `;
 }
 function fmt(s){ return `${Math.floor(s/60)} menit ${s%60?s%60+'d':''}`.trim(); }
 
